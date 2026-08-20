@@ -1,5 +1,9 @@
 # Social Persona Studio
 
+<p align="center">
+  <img src="logo.png" alt="Social Persona Studio" width="200" />
+</p>
+
 Aplicación de escritorio local-first para generar publicaciones de redes
 sociales para múltiples personas editoriales. Elegís una persona, subís
 imágenes y contexto, y recibís 5 conceptos diferenciados con variante para X y
