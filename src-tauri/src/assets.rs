@@ -49,8 +49,21 @@ fn mime_for(ext: &str) -> &'static str {
 }
 
 /// Copia una imagen del disco al almacén local, generando hash y miniatura.
+///
+/// Es `async` a propósito: decodificar y redimensionar una imagen es trabajo
+/// pesado, y un comando síncrono lo haría en el hilo principal, congelando la
+/// ventana mientras tanto.
 #[tauri::command]
-pub fn import_asset(app: AppHandle, source_path: String) -> Result<ImportedAsset, String> {
+pub async fn import_asset(
+    app: AppHandle,
+    source_path: String,
+) -> Result<ImportedAsset, String> {
+    tauri::async_runtime::spawn_blocking(move || import_asset_blocking(app, source_path))
+        .await
+        .map_err(|e| format!("La importacion se interrumpio: {e}"))?
+}
+
+fn import_asset_blocking(app: AppHandle, source_path: String) -> Result<ImportedAsset, String> {
     let source = Path::new(&source_path);
     let bytes = fs::read(source).map_err(|e| format!("No se pudo leer la imagen: {e}"))?;
 
@@ -93,8 +106,17 @@ pub fn import_asset(app: AppHandle, source_path: String) -> Result<ImportedAsset
 }
 
 /// Devuelve la imagen como data URL base64, para enviarla a modelos de visión.
+///
+/// También `async`: leer y codificar en base64 varios cientos de KB no debe
+/// bloquear la interfaz.
 #[tauri::command]
-pub fn read_asset_as_data_url(file_path: String) -> Result<String, String> {
+pub async fn read_asset_as_data_url(file_path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || read_data_url_blocking(file_path))
+        .await
+        .map_err(|e| format!("La lectura se interrumpio: {e}"))?
+}
+
+fn read_data_url_blocking(file_path: String) -> Result<String, String> {
     use std::io::Read;
 
     let path = Path::new(&file_path);

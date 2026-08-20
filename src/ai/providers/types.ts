@@ -25,6 +25,8 @@ export interface AnalyzeImagesOptions {
   prompt: string;
   systemPrompt?: string;
   signal?: AbortSignal;
+  /** Sobreescribe el timeout del proveedor para esta llamada. */
+  timeoutMs?: number;
 }
 
 export interface TestConnectionResult {

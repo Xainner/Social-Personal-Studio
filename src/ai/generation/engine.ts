@@ -101,11 +101,18 @@ export async function generatePosts(input: GenerateInput): Promise<GenerateResul
 
   try {
     // --- Paso de visión ---
+    // Nunca puede tumbar la generación: si el modelo no lee imágenes o el
+    // servidor no responde, se genera igual con el contexto de texto y se
+    // avisa que las imágenes quedaron afuera.
     let imageAnalyses: ImageAnalysis[] = [];
+    const visionWarnings: string[] = [];
+
     if (assets.length > 0) {
       input.onProgress?.("analyzing_images");
       await generationsRepo.setRequestStatus(request.id, "analyzing");
-      imageAnalyses = await analyzeAssets(assets, input);
+      const vision = await analyzeAssets(assets, input);
+      imageAnalyses = vision.analyses;
+      visionWarnings.push(...vision.warnings);
     }
 
     // --- Generación ---
@@ -154,7 +161,11 @@ export async function generatePosts(input: GenerateInput): Promise<GenerateResul
     await generationsRepo.setRequestStatus(request.id, "completed");
     await sessionsRepo.touchSession(input.sessionId);
 
-    return { requestId: request.id, payload: normalized, warnings };
+    return {
+      requestId: request.id,
+      payload: normalized,
+      warnings: [...visionWarnings, ...warnings],
+    };
   } catch (error) {
     const appErr = toAppError(error);
     await generationsRepo.setRequestStatus(request.id, "failed", appErr.message);
@@ -171,40 +182,91 @@ async function loadAssets(assetIds: string[]): Promise<Asset[]> {
   return assets;
 }
 
-/** Analiza cada imagen por separado: un fallo aislado no tumba la generación. */
+/**
+ * Tope de espera para analizar una imagen.
+ *
+ * Deliberadamente mucho mas corto que el timeout de escritura: un endpoint que
+ * no soporta imagenes no devuelve un error, se queda colgado para siempre.
+ * Sin este tope, adjuntar una imagen dejaba la app esperando cinco minutos.
+ */
+const VISION_TIMEOUT_MS = 60_000;
+
+interface VisionResult {
+  analyses: ImageAnalysis[];
+  warnings: string[];
+}
+
+/**
+ * Analiza cada imagen por separado.
+ * Ningun fallo aca detiene la generacion: se reporta como aviso y se sigue
+ * con el contexto de texto, que es mejor que no darle nada al usuario.
+ */
 async function analyzeAssets(
   assets: Asset[],
   input: GenerateInput,
-): Promise<ImageAnalysis[]> {
+): Promise<VisionResult> {
   const providerId = input.visionProviderId ?? input.writingProviderId;
   const model = input.visionModel ?? input.writingModel;
 
-  const vision = await createProviderClient(providerId);
+  let vision: Awaited<ReturnType<typeof createProviderClient>>;
+  try {
+    vision = await createProviderClient(providerId);
+  } catch (cause) {
+    return {
+      analyses: [],
+      warnings: [
+        `No se pudo usar el modelo de vision: ${toAppError(cause).message} Se genero solo con el texto.`,
+      ],
+    };
+  }
+
   if (!vision.capabilities.vision) {
-    throw appError("vision_unsupported");
+    return {
+      analyses: [],
+      warnings: [
+        "El proveedor no esta marcado como capaz de leer imagenes, asi que se genero solo con el contexto de texto.",
+      ],
+    };
   }
 
   const analyses: ImageAnalysis[] = [];
+  const warnings: string[] = [];
 
-  for (const asset of assets) {
+  for (const [index, asset] of assets.entries()) {
+    const label = `Imagen ${index + 1}`;
+
     let dataUrl: string;
     try {
       dataUrl = await invoke<string>("read_asset_as_data_url", {
         filePath: asset.filePath,
       });
     } catch (cause) {
-      if (String(cause).includes("missing_local_asset")) {
-        throw appError("missing_local_asset", cause);
-      }
-      throw appError("invalid_image", cause);
+      warnings.push(
+        String(cause).includes("missing_local_asset")
+          ? `${label}: el archivo ya no esta en el disco, se ignoro.`
+          : `${label}: no se pudo leer, se ignoro.`,
+      );
+      continue;
     }
 
-    const raw = await vision.analyzeImages({
-      model,
-      images: [{ dataUrl }],
-      prompt: visionPrompt(),
-      signal: input.signal,
-    });
+    let raw: string;
+    try {
+      raw = await vision.analyzeImages({
+        model,
+        images: [{ dataUrl }],
+        prompt: visionPrompt(),
+        signal: input.signal,
+        timeoutMs: VISION_TIMEOUT_MS,
+      });
+    } catch (cause) {
+      const err = toAppError(cause);
+      warnings.push(
+        err.code === "generation_timeout"
+          ? `${label}: el modelo "${model}" no respondio al enviarle la imagen. Probablemente no soporta vision; desmarcala en Ajustes.`
+          : `${label}: fallo el analisis (${err.message}) y se ignoro.`,
+      );
+      continue;
+    }
 
     const json = extractJsonObject(raw);
     const parsed = json ? imageAnalysisSchema.safeParse(safeJsonParse(json)) : null;
@@ -228,7 +290,13 @@ async function analyzeAssets(
     }
   }
 
-  return analyses;
+  if (assets.length > 0 && analyses.length === 0 && warnings.length > 0) {
+    warnings.push(
+      "Ninguna imagen pudo analizarse: las publicaciones salieron solo del contexto escrito.",
+    );
+  }
+
+  return { analyses, warnings };
 }
 
 function safeJsonParse(text: string): unknown {

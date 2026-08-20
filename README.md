@@ -86,8 +86,10 @@ modelo se usaron en cada generación.
 ## Primeros pasos
 
 1. **Ajustes → Proveedores de IA → Agregar**: cargá un endpoint compatible con
-   OpenAI (URL base `.../v1`, modelo y API key). Marcá *visión* si el modelo lee
-   imágenes. También soporta Anthropic y Ollama.
+   OpenAI (URL base `.../v1`, modelo y API key) y usá **Buscar modelos** para
+   elegir el modelo de la lista real del endpoint. Marcá *visión* si el modelo
+   lee imágenes. Esto cubre OpenAI, OpenRouter, LiteLLM, LM Studio, llama.cpp y
+   cualquier servidor que hable el mismo protocolo.
 2. **Modelos por rol**: elegí qué proveedor y modelo escribe y cuál analiza
    imágenes.
 3. **Persona**: creala desde la barra lateral y definí identidad, estilo,
@@ -146,6 +148,8 @@ TanStack Query · Zustand · zod · SQLite.
 - ✔️ Adaptadores de X y Telegram
 - ✔️ Posts guardados con estados y anti-repetición
 - ✔️ Respaldos y restauración
+- ⏳ Adaptadores nativos de Anthropic y Ollama (hablan un protocolo distinto al
+  de OpenAI; están declarados pero todavía no implementados)
 
 **Fuera de alcance por ahora:** publicación automática, programación de posts,
 analytics y sincronización en la nube.

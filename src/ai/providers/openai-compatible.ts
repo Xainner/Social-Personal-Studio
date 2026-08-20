@@ -47,12 +47,18 @@ export class OpenAICompatibleProvider implements AIProvider {
   }
 
   /** Combina el timeout configurado con la cancelación del usuario. */
-  private withTimeout(signal?: AbortSignal): {
+  private withTimeout(
+    signal?: AbortSignal,
+    timeoutMs?: number,
+  ): {
     signal: AbortSignal;
     cleanup: () => void;
   } {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort("timeout"), this.config.timeoutMs);
+    const timer = setTimeout(
+      () => controller.abort("timeout"),
+      timeoutMs ?? this.config.timeoutMs,
+    );
 
     const onAbort = () => controller.abort(signal?.reason);
     if (signal) {
@@ -73,8 +79,9 @@ export class OpenAICompatibleProvider implements AIProvider {
     path: string,
     body: unknown,
     signal?: AbortSignal,
+    timeoutMs?: number,
   ): Promise<ChatCompletionResponse> {
-    const { signal: merged, cleanup } = this.withTimeout(signal);
+    const { signal: merged, cleanup } = this.withTimeout(signal, timeoutMs);
 
     let response: Response;
     try {
@@ -210,6 +217,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       "/chat/completions",
       { model: options.model, messages, temperature: 0.2 },
       options.signal,
+      options.timeoutMs,
     );
     return OpenAICompatibleProvider.readContent(response);
   }
