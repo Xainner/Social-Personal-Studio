@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Social Persona Studio" width="320" />
+  <img src="assets/logo.png" alt="Social Persona Studio" width="320" />
 </p>
 
 <h1 align="center">Social Persona Studio</h1>
