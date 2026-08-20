@@ -1,14 +1,25 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/primitives";
+import { Input, Label, Select, Spinner } from "@/components/ui/primitives";
 import { ErrorMessage } from "@/components/error-message";
 import { useAddModel, useCreateProvider, useUpdateProvider } from "@/hooks/use-providers";
 import { DEFAULT_CAPABILITIES } from "@/db/repositories/providers";
+import { OpenAICompatibleProvider } from "@/ai/providers/openai-compatible";
+import { toAppError } from "@/types/errors";
 import type { AIProviderConfig } from "@/types/domain";
 
 const DEFAULT_TIMEOUT_MS = 300_000;
+
+/** Lee la key ya guardada en el llavero para poder listar modelos al editar. */
+async function resolveExistingKey(
+  provider: AIProviderConfig | undefined,
+): Promise<string | null> {
+  if (!provider) return null;
+  const { getProviderApiKey } = await import("@/db/repositories/providers");
+  return getProviderApiKey(provider);
+}
 
 interface ProviderFormProps {
   open: boolean;
@@ -36,8 +47,50 @@ export function ProviderForm({ open, onClose, provider }: ProviderFormProps) {
     String((provider?.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000),
   );
 
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelsError, setModelsError] = useState<unknown>(null);
+
   const isEditing = Boolean(provider);
   const pending = createProvider.isPending || updateProvider.isPending;
+
+  /**
+   * Consulta al endpoint que modelos ofrece realmente.
+   * Elegirlos de una lista evita el error mas facil de cometer y mas dificil
+   * de diagnosticar: un nombre de modelo mal tipeado.
+   */
+  async function loadModels() {
+    setModelsError(null);
+    setLoadingModels(true);
+    try {
+      const probe = new OpenAICompatibleProvider(
+        {
+          id: provider?.id ?? "probe",
+          name: name.trim() || "probe",
+          kind: "openai_compatible",
+          baseUrl: baseUrl.trim(),
+          keyringRef: null,
+          capabilities: { ...DEFAULT_CAPABILITIES, vision: hasVision },
+          timeoutMs: 30_000,
+          enabled: true,
+          createdAt: new Date().toISOString(),
+        },
+        apiKey || (await resolveExistingKey(provider)),
+      );
+
+      const models = await probe.listModels();
+      setAvailableModels(models);
+      if (models.length === 0) {
+        setModelsError(
+          new Error("El endpoint respondio pero no devolvio ningun modelo."),
+        );
+      }
+    } catch (error) {
+      setModelsError(toAppError(error));
+    } finally {
+      setLoadingModels(false);
+    }
+  }
 
   async function handleSubmit() {
     const capabilities = { ...DEFAULT_CAPABILITIES, vision: hasVision };
@@ -134,18 +187,54 @@ export function ProviderForm({ open, onClose, provider }: ProviderFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="provider-model">Nombre del modelo</Label>
-          <Input
-            id="provider-model"
-            value={modelName}
-            onChange={(e) => setModelName(e.target.value)}
-            placeholder="qwen3.6-27b"
-          />
-          {isEditing ? (
-            <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
+          <Label htmlFor="provider-model">Modelo</Label>
+
+          {availableModels.length > 0 ? (
+            <Select
+              id="provider-model"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+            >
+              <option value="">Elegi un modelo...</option>
+              {availableModels.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              id="provider-model"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              placeholder="qwen3.6-27b"
+            />
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={loadModels}
+            disabled={!baseUrl.trim() || loadingModels}
+          >
+            {loadingModels ? <Spinner /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {availableModels.length > 0 ? "Actualizar lista" : "Buscar modelos"}
+          </Button>
+
+          <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
+            {availableModels.length > 0
+              ? `${availableModels.length} modelos disponibles en el endpoint.`
+              : "Cargá la URL y la key, luego buscá los modelos para elegir de la lista y evitar errores de tipeo."}
+          </p>
+
+          {isEditing && availableModels.length === 0 ? (
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
               Dejalo vacio para no agregar otro modelo.
             </p>
           ) : null}
+
+          <ErrorMessage error={modelsError} className="mt-2" />
         </div>
 
         <div>

@@ -100,17 +100,52 @@ export class OpenAICompatibleProvider implements AIProvider {
 
     const json = (await response.json()) as ChatCompletionResponse;
     if (json.error) {
-      throw appError("provider_unavailable", json.error.message);
+      throw OpenAICompatibleProvider.detailedError(
+        "provider_unavailable",
+        json.error.message ?? "",
+      );
     }
     return json;
   }
 
+  /**
+   * Construye un AppError conservando el mensaje del servidor.
+   * Sin esto, un "modelo invalido" se mostraba como "no se pudo contactar al
+   * proveedor" y mandaba al usuario a revisar el servidor equivocado.
+   */
+  private static detailedError(
+    code: Parameters<typeof appError>[0],
+    detail: string,
+  ): AppError {
+    const base = appError(code);
+    const clean = extractServerMessage(detail);
+    return new AppError(
+      code,
+      base.message,
+      clean ? `El servidor respondio: "${clean}". ${base.action}` : base.action,
+      detail,
+    );
+  }
+
   private mapHttpError(status: number, body: string): AppError {
-    if (status === 401 || status === 403) return appError("invalid_api_key", body);
-    if (status === 404) return appError("model_unavailable", body);
-    if (status === 429) return appError("rate_limited", body);
-    if (status >= 500) return appError("provider_unavailable", body);
-    return appError("provider_unavailable", `HTTP ${status}: ${body}`);
+    if (status === 401 || status === 403) {
+      return OpenAICompatibleProvider.detailedError("invalid_api_key", body);
+    }
+    if (status === 404) {
+      return OpenAICompatibleProvider.detailedError("model_unavailable", body);
+    }
+    if (status === 429) {
+      return OpenAICompatibleProvider.detailedError("rate_limited", body);
+    }
+    if (status >= 500) {
+      return OpenAICompatibleProvider.detailedError("provider_unavailable", body);
+    }
+    // Un 400 casi siempre es un parametro mal formado; el caso mas comun de
+    // lejos es un nombre de modelo que no existe en el servidor.
+    if (status === 400 && /model/i.test(body)) {
+      return OpenAICompatibleProvider.detailedError("model_unavailable", body);
+    }
+    return OpenAICompatibleProvider.detailedError("validation_failed", body);
   }
 
   private static readContent(response: ChatCompletionResponse): string {
@@ -227,5 +262,26 @@ async function safeText(response: Response): Promise<string> {
     return (await response.text()).slice(0, 500);
   } catch {
     return "";
+  }
+}
+
+/**
+ * Saca el mensaje humano del cuerpo de error, que suele venir como
+ * {"error":{"message":"..."}}. Si no es JSON, devuelve el texto recortado.
+ */
+export function extractServerMessage(body: string): string {
+  if (!body) return "";
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string } | string;
+      message?: string;
+    };
+    const raw =
+      typeof parsed.error === "string"
+        ? parsed.error
+        : (parsed.error?.message ?? parsed.message ?? "");
+    return raw.trim().slice(0, 200);
+  } catch {
+    return body.trim().slice(0, 200);
   }
 }
