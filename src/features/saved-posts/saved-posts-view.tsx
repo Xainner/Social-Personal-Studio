@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { Check, Copy, Heart, Search, Trash2 } from "lucide-react";
+import { useState, type ButtonHTMLAttributes } from "react";
+import {
+  Archive,
+  Bookmark,
+  Check,
+  Copy,
+  Heart,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Badge,
@@ -28,6 +36,13 @@ const STATUS_LABELS: Record<PostStatus, string> = {
   archived: "Archivado",
 };
 
+const STATUS_BADGE: Record<PostStatus, "default" | "success" | "warning" | "primary"> = {
+  draft: "default",
+  saved: "primary",
+  used: "success",
+  archived: "warning",
+};
+
 export function SavedPostsView() {
   const activePersonaId = useAppStore((s) => s.activePersonaId);
   const [status, setStatus] = useState<PostStatus | "">("");
@@ -42,31 +57,41 @@ export function SavedPostsView() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
-      <header>
-        <h1 className="text-xl font-semibold">Publicaciones</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">
-          {activePersonaId
-            ? "De la persona activa."
-            : "De todas las personas. Elegi una en la barra lateral para filtrar."}
-        </p>
+    <div className="mx-auto max-w-4xl space-y-5 p-8">
+      <header className="flex items-center gap-3.5 animate-fade-up">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[oklch(0.45_0.24_292)] text-white shadow-[var(--shadow-glow)]">
+          <Bookmark className="h-5 w-5" strokeWidth={2} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Publicaciones</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {activePersonaId
+              ? "De la persona activa."
+              : "De todas las personas. Elegi una en la barra lateral para filtrar."}
+          </p>
+        </div>
+        {posts.length > 0 ? (
+          <Badge variant="outline" className="ml-auto">
+            {posts.length}
+          </Badge>
+        ) : null}
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
+      <div className="flex flex-wrap items-center gap-2.5 animate-fade-up">
+        <div className="relative min-w-48 flex-1">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar en el texto..."
-            className="pl-8"
+            className="pl-9"
           />
         </div>
 
         <Select
           value={status}
           onChange={(e) => setStatus(e.target.value as PostStatus | "")}
-          className="w-40"
+          className="w-44"
         >
           <option value="">Todos los estados</option>
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
@@ -92,13 +117,20 @@ export function SavedPostsView() {
         <p className="text-sm text-[var(--muted-foreground)]">Cargando...</p>
       ) : posts.length === 0 ? (
         <EmptyState
+          icon={<Bookmark className="h-6 w-6" />}
           title="No hay publicaciones todavia"
           description="Genera opciones desde la pantalla de creacion y guarda las que te sirvan."
         />
       ) : (
-        <ul className="space-y-2">
-          {posts.map((post) => (
-            <PostRow key={post.id} post={post} />
+        <ul className="space-y-3">
+          {posts.map((post, i) => (
+            <li
+              key={post.id}
+              className="animate-fade-up"
+              style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+            >
+              <PostRow post={post} />
+            </li>
           ))}
         </ul>
       )}
@@ -115,11 +147,13 @@ function PostRow({ post }: { post: SavedPost }) {
   const adapter = getPlatformAdapter(post.platform);
 
   return (
-    <Card>
-      <CardContent className="space-y-2 pt-4">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">{adapter.displayName}</Badge>
-          <Badge variant={post.status === "used" ? "success" : "default"}>
+    <Card className="transition-all duration-200 hover:shadow-[var(--shadow-float)]">
+      <CardContent className="space-y-3 pt-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="outline" className="font-medium">
+            {adapter.displayName}
+          </Badge>
+          <Badge variant={STATUS_BADGE[post.status]}>
             {STATUS_LABELS[post.status]}
           </Badge>
           {post.tags?.map((tag) => (
@@ -127,76 +161,87 @@ function PostRow({ post }: { post: SavedPost }) {
               {tag}
             </Badge>
           ))}
-          <span className="ml-auto text-xs text-[var(--muted-foreground)]">
+          <span className="ml-auto text-xs tabular-nums text-[var(--muted-foreground)]">
             {new Date(post.createdAt).toLocaleDateString("es-CR")}
           </span>
         </div>
 
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.finalText}</p>
 
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={() => setFavorite.mutate({ id: post.id, favorite: !post.favorite })}
+        <div className="flex flex-wrap gap-0.5 border-t border-[var(--border)] pt-2">
+          <RowAction
+            onClick={() =>
+              setFavorite.mutate({ id: post.id, favorite: !post.favorite })
+            }
           >
             <Heart
               className={cn(
-                "h-3 w-3",
-                post.favorite && "fill-current text-[var(--primary)]",
+                "h-3 w-3 transition-colors",
+                post.favorite && "fill-[var(--primary)] text-[var(--primary)]",
               )}
             />
             Favorito
-          </Button>
+          </RowAction>
 
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
+          <RowAction
             onClick={async () => {
               await navigator.clipboard.writeText(post.finalText);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
           >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? (
+              <Check className="h-3 w-3 text-[var(--success)]" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
             {copied ? "Copiado" : "Copiar"}
-          </Button>
+          </RowAction>
 
           {post.status !== "used" ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
+            <RowAction
               onClick={() => setStatus.mutate({ id: post.id, status: "used" })}
             >
+              <Check className="h-3 w-3" />
               Marcar usado
-            </Button>
+            </RowAction>
           ) : null}
 
           {post.status !== "archived" ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
+            <RowAction
               onClick={() => setStatus.mutate({ id: post.id, status: "archived" })}
             >
+              <Archive className="h-3 w-3" />
               Archivar
-            </Button>
+            </RowAction>
           ) : null}
 
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs text-[var(--destructive)]"
+          <RowAction
+            className="text-[var(--destructive)] hover:bg-[var(--destructive)]/12"
             onClick={() => deletePost.mutate(post.id)}
           >
             <Trash2 className="h-3 w-3" />
             Eliminar
-          </Button>
+          </RowAction>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function RowAction({
+  children,
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn("h-7 text-xs", className)}
+      {...props}
+    >
+      {children}
+    </Button>
   );
 }
