@@ -9,7 +9,7 @@ import type {
 import { cn } from "@/utils/cn";
 
 const FIELD_BASE =
-  "w-full rounded-md border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm placeholder:text-[var(--muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:opacity-50";
+  "w-full rounded-lg border border-[var(--input)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--card-foreground)] shadow-[var(--shadow-soft)] transition-all duration-200 placeholder:text-[var(--muted-foreground)]/70 focus-visible:outline-none focus-visible:border-[var(--ring)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]/30 disabled:opacity-50";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(FIELD_BASE, "h-9", className)} {...props} />;
@@ -19,20 +19,25 @@ export function Textarea({
   className,
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(FIELD_BASE, "min-h-20 resize-y", className)} {...props} />;
+  return (
+    <textarea className={cn(FIELD_BASE, "min-h-20 resize-y leading-relaxed", className)} {...props} />
+  );
 }
 
 export function Select({
   className,
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(FIELD_BASE, "h-9", className)} {...props} />;
+  return <select className={cn(FIELD_BASE, "h-9 cursor-pointer", className)} {...props} />;
 }
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("mb-1.5 block text-sm font-medium text-[var(--foreground)]", className)}
+      className={cn(
+        "mb-1.5 block text-[13px] font-medium tracking-tight text-[var(--card-foreground)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -42,7 +47,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)]",
+        "rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-[var(--shadow-soft)] transition-shadow duration-200",
         className,
       )}
       {...props}
@@ -63,19 +68,22 @@ export function Badge({
   variant = "default",
   ...props
 }: HTMLAttributes<HTMLSpanElement> & {
-  variant?: "default" | "outline" | "success" | "warning" | "destructive";
+  variant?: "default" | "outline" | "success" | "warning" | "destructive" | "info" | "primary";
 }) {
   const styles: Record<string, string> = {
     default: "bg-[var(--secondary)] text-[var(--secondary-foreground)]",
-    outline: "border border-[var(--border)] text-[var(--muted-foreground)]",
-    success: "bg-[var(--success)]/15 text-[var(--success)]",
-    warning: "bg-[var(--warning)]/15 text-[var(--warning)]",
-    destructive: "bg-[var(--destructive)]/15 text-[var(--destructive)]",
+    outline:
+      "border border-[var(--border)] bg-transparent text-[var(--muted-foreground)]",
+    success: "bg-[var(--success)]/12 text-[var(--success)]",
+    warning: "bg-[var(--warning)]/12 text-[var(--warning)]",
+    destructive: "bg-[var(--destructive)]/12 text-[var(--destructive)]",
+    info: "bg-[var(--accent-cyan-soft)] text-[var(--accent-cyan)]",
+    primary: "bg-[var(--primary)]/12 text-[var(--primary)]",
   };
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium leading-5",
         styles[variant],
         className,
       )}
@@ -100,12 +108,16 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-      {icon ? <div className="text-[var(--muted-foreground)]">{icon}</div> : null}
-      <div>
-        <p className="text-sm font-medium">{title}</p>
+    <div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-16 text-center animate-fade-in">
+      {icon ? (
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] shadow-[var(--shadow-soft)]">
+          {icon}
+        </div>
+      ) : null}
+      <div className="space-y-1.5">
+        <p className="text-base font-semibold tracking-tight">{title}</p>
         {description ? (
-          <p className="mt-1 max-w-md text-sm text-[var(--muted-foreground)]">
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
             {description}
           </p>
         ) : null}
@@ -124,5 +136,25 @@ export function Spinner({ className }: { className?: string }) {
       )}
       aria-hidden
     />
+  );
+}
+
+/**
+ * Píldora de sección: rótulos de agrupación en listas (Personas, Sesiones).
+ */
+export function SectionHeader({
+  label,
+  action,
+}: {
+  label: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="mb-1.5 flex items-center justify-between px-2">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+        {label}
+      </span>
+      {action}
+    </div>
   );
 }

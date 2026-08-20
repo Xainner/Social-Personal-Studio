@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, Plus, Trash2, UserRound } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { exportPersona } from "@/features/personas/persona-io";
@@ -59,44 +59,49 @@ export function PersonaEditorView() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {persona.displayName || persona.name}
-          </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Identidad editorial independiente
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <ExportPersonaButton personaId={personaId} personaName={persona.name} />
-          <DeletePersonaButton
-            personaId={personaId}
-            onDeleted={() => {
-              setActivePersona(null);
-              navigate("/composer");
-            }}
-          />
-        </div>
-      </header>
+      <div className="mx-auto max-w-3xl space-y-5 p-8">
+        <header className="flex items-start justify-between gap-4 animate-fade-up">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[oklch(0.45_0.24_292)] text-white shadow-[var(--shadow-glow)]">
+              <UserRound className="h-6 w-6" strokeWidth={2} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {persona.displayName || persona.name}
+              </h1>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Identidad editorial independiente
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <ExportPersonaButton personaId={personaId} personaName={persona.name} />
+            <DeletePersonaButton
+              personaId={personaId}
+              onDeleted={() => {
+                setActivePersona(null);
+                navigate("/composer");
+              }}
+            />
+          </div>
+        </header>
 
-      <nav className="flex gap-1 border-b border-[var(--border)]">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm transition-colors",
-              tab === t.id
-                ? "border-[var(--primary)] font-medium"
-                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+        <nav className="flex gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[var(--shadow-soft)]">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex-1 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150",
+                tab === t.id
+                  ? "bg-[var(--primary)]/12 text-[var(--primary)] shadow-[inset_0_0_0_1px_var(--primary)/25]"
+                  : "text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--card-foreground)]",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
       {tab === "core" ? <CoreTab personaId={personaId} /> : null}
       {tab === "examples" ? <ExamplesTab personaId={personaId} /> : null}

@@ -27,7 +27,7 @@ export function ImageDropzone({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 animate-fade-up">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -39,10 +39,10 @@ export function ImageDropzone({ sessionId }: { sessionId: string }) {
           setIsDragging(false);
         }}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 transition-colors",
+          "flex flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed px-6 py-9 transition-all duration-200",
           isDragging
-            ? "border-[var(--primary)] bg-[var(--accent)]/40"
-            : "border-[var(--border)]",
+            ? "border-[var(--primary)] bg-[var(--primary)]/8 shadow-[var(--shadow-glow)]"
+            : "border-[var(--border)] bg-[var(--surface)]/40 hover:border-[var(--muted-foreground)]/40",
         )}
       >
         {importAssets.isPending ? (
@@ -52,7 +52,9 @@ export function ImageDropzone({ sessionId }: { sessionId: string }) {
           </div>
         ) : (
           <>
-            <ImagePlus className="h-6 w-6 text-[var(--muted-foreground)]" />
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <ImagePlus className="h-5 w-5" />
+            </span>
             <p className="text-sm text-[var(--muted-foreground)]">
               Arrastra imagenes aca
             </p>
@@ -70,7 +72,7 @@ export function ImageDropzone({ sessionId }: { sessionId: string }) {
           {assets.map((asset) => (
             <div
               key={asset.id}
-              className="group relative aspect-square overflow-hidden rounded-md border border-[var(--border)]"
+              className="group relative aspect-square overflow-hidden rounded-lg border border-[var(--border)] transition-all duration-200 hover:border-[var(--primary)]/40 hover:shadow-[var(--shadow-soft)]"
             >
               <img
                 src={convertFileSrc(asset.thumbnailPath ?? asset.filePath)}
@@ -80,7 +82,7 @@ export function ImageDropzone({ sessionId }: { sessionId: string }) {
               />
               <button
                 onClick={() => unlinkAsset.mutate(asset.id)}
-                className="absolute right-1 top-1 rounded-full bg-black/70 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute right-1 top-1 rounded-full bg-black/70 p-1 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
                 aria-label="Quitar de la sesion"
               >
                 <X className="h-3 w-3 text-white" />

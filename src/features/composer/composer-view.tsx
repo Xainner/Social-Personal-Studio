@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  ImagePlus,
+  Share2,
+  Sparkles,
+  UserRound,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Badge,
+  Card,
   EmptyState,
   Label,
   Spinner,
@@ -72,8 +80,9 @@ export function ComposerView() {
   if (!persona) {
     return (
       <EmptyState
-        title="Elegi o crea una persona"
-        description="Cada persona tiene su propia voz, memoria, imagenes e historial. Empeza creando una desde la barra lateral."
+        icon={<UserRound className="h-6 w-6" />}
+        title="Elegí o creá una persona"
+        description="Cada persona tiene su propia voz, memoria, imágenes e historial. Empezá creando una desde la barra lateral."
       />
     );
   }
@@ -81,8 +90,9 @@ export function ComposerView() {
   if (!session) {
     return (
       <EmptyState
-        title={`Crea una sesion para ${persona.displayName || persona.name}`}
-        description="Las sesiones agrupan las imagenes y el contexto de un mismo tema, para poder volver despues."
+        icon={<ImagePlus className="h-6 w-6" />}
+        title={`Creá una sesión para ${persona.displayName || persona.name}`}
+        description="Las sesiones agrupan las imágenes y el contexto de un mismo tema, para poder volver después."
       />
     );
   }
@@ -115,17 +125,30 @@ export function ComposerView() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <header className="flex items-baseline justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {persona.displayName || persona.name}
-          </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">{session.name}</p>
+    <div className="mx-auto max-w-5xl space-y-6 p-8">
+      {/* Header: identidad de la persona activa */}
+      <header className="flex items-center justify-between gap-4 animate-fade-up">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[oklch(0.45_0.24_292)] text-white shadow-[var(--shadow-glow)]">
+            <UserRound className="h-6 w-6" strokeWidth={2} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold tracking-tight">
+              {persona.displayName || persona.name}
+            </h1>
+            <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <span className="truncate">{session.name}</span>
+              {assets.length > 0 ? (
+                <Badge variant="outline" className="shrink-0">
+                  {assets.length} img
+                </Badge>
+              ) : null}
+            </div>
+          </div>
         </div>
         <Link
           to={`/persona/${persona.id}`}
-          className="text-xs text-[var(--muted-foreground)] underline-offset-4 hover:underline"
+          className="shrink-0 text-xs font-medium text-[var(--muted-foreground)] underline-offset-4 transition-colors hover:text-[var(--primary)] hover:underline"
         >
           Editar persona
         </Link>
@@ -133,33 +156,35 @@ export function ComposerView() {
 
       <ImageDropzone sessionId={session.id} />
 
-      <div>
-        <Label htmlFor="session-context">Contexto de la sesion</Label>
-        <Textarea
-          id="session-context"
-          value={sessionContext}
-          onChange={(e) => setSessionContext(e.target.value)}
-          placeholder={"Fin de semana en la playa.\nNo mencionar la ubicacion."}
-          className="min-h-16"
-        />
-      </div>
+      <div className="grid gap-5 lg:grid-cols-2 animate-fade-up">
+        <Card className="p-4">
+          <Label htmlFor="session-context">Contexto de la sesión</Label>
+          <Textarea
+            id="session-context"
+            value={sessionContext}
+            onChange={(e) => setSessionContext(e.target.value)}
+            placeholder={"Fin de semana en la playa.\nNo mencionar la ubicación."}
+            className="min-h-20 bg-[var(--surface)]"
+          />
+        </Card>
 
-      <div>
-        <Label htmlFor="user-context">Indicacion para esta generacion</Label>
-        <Textarea
-          id="user-context"
-          value={userContext}
-          onChange={(e) => setUserContext(e.target.value)}
-          placeholder="Opcional: angulo, idea o algo puntual que quieras esta vez."
-          className="min-h-16"
-        />
+        <Card className="p-4">
+          <Label htmlFor="user-context">Indicación para esta generación</Label>
+          <Textarea
+            id="user-context"
+            value={userContext}
+            onChange={(e) => setUserContext(e.target.value)}
+            placeholder="Opcional: ángulo, idea o algo puntual que quieras esta vez."
+            className="min-h-20 bg-[var(--surface)]"
+          />
+        </Card>
       </div>
 
       {styleReference ? (
-        <div className="flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--accent)]/30 px-3 py-2">
+        <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/8 px-3.5 py-2.5 animate-fade-in">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary)]" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium">Usando como referencia de estilo</p>
+            <p className="text-xs font-semibold">Usando como referencia de estilo</p>
             <p className="truncate text-xs text-[var(--muted-foreground)]">
               {styleReference}
             </p>
@@ -175,9 +200,12 @@ export function ComposerView() {
         </div>
       ) : null}
 
-      <div>
-        <Label>Plataformas</Label>
-        <div className="flex gap-2">
+      <Card className="p-4 animate-fade-up">
+              <div className="mb-2.5 flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-[var(--muted-foreground)]" />
+                <Label className="mb-0">Plataformas</Label>
+              </div>
+        <div className="flex flex-wrap gap-2">
           {listPlatformAdapters().map((adapter) => {
             const selected = platforms.includes(adapter.id);
             return (
@@ -191,10 +219,10 @@ export function ComposerView() {
                   )
                 }
                 className={cn(
-                  "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                  "cursor-pointer rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 active:scale-[0.97]",
                   selected
-                    ? "border-[var(--primary)] bg-[var(--primary)]/10 font-medium"
-                    : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)]/50",
+                    ? "border-[var(--primary)]/40 bg-[var(--primary)]/12 text-[var(--primary)] shadow-[var(--shadow-glow)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] hover:border-[var(--muted-foreground)]/40 hover:text-[var(--card-foreground)]",
                 )}
               >
                 {adapter.displayName}
@@ -203,36 +231,44 @@ export function ComposerView() {
           })}
         </div>
         {platforms.length === 0 ? (
-          <p className="mt-1.5 text-xs text-[var(--destructive)]">
-            Elegi al menos una plataforma.
+          <p className="mt-2 text-xs font-medium text-[var(--destructive)]">
+            Elegí al menos una plataforma.
           </p>
         ) : null}
-      </div>
+      </Card>
 
       {missingProvider ? (
-        <div className="rounded-md border border-[var(--warning)]/40 bg-[var(--warning)]/10 px-3 py-2.5 text-sm">
-          <p className="font-medium">Falta configurar la IA</p>
+        <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning)]/8 px-4 py-3 text-sm animate-fade-in">
+          <p className="font-semibold">Falta configurar la IA</p>
           <p className="mt-0.5 text-[var(--muted-foreground)]">
-            Anda a{" "}
-            <Link to="/settings" className="underline underline-offset-2">
+            Andá a{" "}
+            <Link to="/settings" className="font-medium underline underline-offset-2">
               Ajustes
             </Link>{" "}
-            y agrega tu endpoint (URL base, modelo y API key).
+            y agregá tu endpoint (URL base, modelo y API key).
           </p>
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3">
-        <Button size="lg" onClick={handleGenerate} disabled={!readyToGenerate}>
+      {/* CTA principal */}
+      <div className="flex items-center gap-3 animate-fade-up">
+        <Button
+          size="lg"
+          className="min-w-56"
+          onClick={handleGenerate}
+          disabled={!readyToGenerate}
+        >
           {generation.isGenerating ? (
             <>
               <Spinner />
               {generation.stageLabel}
+              <span className="ml-1 inline-block h-4 w-px bg-white/30" />
             </>
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
               Generar 5 opciones
+              <ArrowRight className="h-4 w-4 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5" />
             </>
           )}
         </Button>
@@ -256,24 +292,34 @@ export function ComposerView() {
       ) : null}
 
       {generation.options.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Opciones generadas</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {generation.options.map((option) => (
-              <OptionCard
+        <section className="space-y-4 pt-2">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-semibold tracking-tight">
+              Opciones generadas
+            </h2>
+            <Badge variant="primary">{generation.options.length}</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {generation.options.map((option, i) => (
+              <div
                 key={option.id}
-                option={option}
-                personaId={persona.id}
-                sessionId={session.id}
-                writingProviderId={writingProviderId as string}
-                writingModel={writingModel as string}
-                recentPostsWindow={settings.recentPostsWindow}
-                onChanged={generation.refresh}
-                onMoreLikeThis={(text) => {
-                  setStyleReference(text);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              />
+                className="animate-fade-up"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <OptionCard
+                  option={option}
+                  personaId={persona.id}
+                  sessionId={session.id}
+                  writingProviderId={writingProviderId as string}
+                  writingModel={writingModel as string}
+                  recentPostsWindow={settings.recentPostsWindow}
+                  onChanged={generation.refresh}
+                  onMoreLikeThis={(text) => {
+                    setStyleReference(text);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              </div>
             ))}
           </div>
         </section>
