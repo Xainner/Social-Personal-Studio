@@ -150,6 +150,11 @@ TanStack Query · Zustand · zod · SQLite.
 - ✔️ Respaldos y restauración
 - ⏳ Adaptadores nativos de Anthropic y Ollama (hablan un protocolo distinto al
   de OpenAI; están declarados pero todavía no implementados)
+- ⚠️ **Visión bloqueada por el servidor de IA.** El endpoint actual no tiene
+  ningún modelo que acepte imágenes y las peticiones con imagen quedan colgadas
+  sin responder. La app ya degrada con gracia (genera igual, usando el contexto
+  escrito, y avisa). Detalle técnico y pasos para resolverlo:
+  [`docs/vision-pendiente.md`](docs/vision-pendiente.md)
 
 **Fuera de alcance por ahora:** publicación automática, programación de posts,
 analytics y sincronización en la nube.
